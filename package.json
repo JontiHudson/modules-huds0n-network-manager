@@ -1,0 +1,36 @@
+{
+  "name": "@huds0n/network-manager",
+  "version": "1.5.0-beta.8",
+  "description": "Applies message bar when no connection found and when data is no longer fresh. Exposed the hook: useIsConnected",
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "keywords": [
+    "network",
+    "connection",
+    "data",
+    "stale",
+    "fresh"
+  ],
+  "contributors": [
+    {
+      "name": "J Hudson"
+    },
+    {
+      "name": "M Hudson"
+    }
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@huds0n/core": "1.5.0-beta.8",
+    "@huds0n/error": "1.5.0-beta.8",
+    "@huds0n/toast": "1.5.0-beta.8",
+    "@huds0n/utilities": "1.5.0-beta.8",
+    "@react-native-community/netinfo": "^5.9.2"
+  },
+  "devDependencies": {
+    "@types/react-native": "^0.62.13"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

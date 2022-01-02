@@ -1,54 +1,54 @@
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 
-import { Toast, ToastTypes } from '@huds0n/toast';
-import { Core } from '@huds0n/core';
 import Huds0nError from '@huds0n/error';
+import { Toast, ToastTypes } from '@huds0n/toast';
+import { theme } from '@huds0n/theming/src/theme';
 import {
   assignEnumerableGetters,
-  makePromiseCancellable,
   useAsyncCallback,
   useMemo,
 } from '@huds0n/utilities';
+import { huds0nState } from '@huds0n/utilities/src/_core';
 
-import { theming } from './theming';
 import * as Types from './types';
 
 export class NetworkManagerClass {
-  theming = theming;
-
-  static DEFAULT_NO_NETWORK_MESSAGE: ToastTypes.Message = {
+  static DEFAULT_NO_NETWORK_MESSAGE: ToastTypes.Message<any> = {
     autoDismiss: false,
-    backgroundColor: Core.colors.WARN,
+    get backgroundColor() {
+      return theme.colors.WARN;
+    },
+    zIndex: 1,
     layout: 'relative',
     message: 'No Network Connection',
     messageStyle: { alignSelf: 'center' },
   };
-  static DEFAULT_SUBMITTING_MESSAGE: ToastTypes.Message = {
+  static DEFAULT_SUBMITTING_MESSAGE: ToastTypes.Message<any> = {
     autoDismiss: false,
     dismissOnScreenPress: true,
   };
-  static DEFAULT_ERROR_MESSAGE: ToastTypes.Message = {
+  static DEFAULT_ERROR_MESSAGE: ToastTypes.Message<any> = {
     autoDismiss: false,
-    backgroundColor: Core.colors.ERROR,
+    get backgroundColor() {
+      return theme.colors.ERROR;
+    },
     disableScreenTouch: true,
-    highPriority: true,
+    zIndex: 3,
     icon: {
       name: 'error-outline',
       set: 'MaterialIcons',
     },
   };
 
-  private _noNetworkId?: Symbol | string;
-  private _noNetworkMessage = NetworkManagerClass.DEFAULT_NO_NETWORK_MESSAGE;
-  private _ToastComponent: any;
+  private _noNetworkId = Symbol('noNetworkMessageId');
+  private _noNetworkMessage: ToastTypes.MessageWithoutPreset =
+    NetworkManagerClass.DEFAULT_NO_NETWORK_MESSAGE;
+  private _ToastComponent = Toast;
 
-  constructor({ noNetworkMessage, ToastComponent = Toast }: Types.Options) {
-    this._ToastComponent = ToastComponent;
-
-    noNetworkMessage && this.setNoNetworkMessage(noNetworkMessage);
+  constructor() {
     this._handleConnection();
 
-    this.onConnection = this.onConnection.bind(this);
+    this.onConnectionAsync = this.onConnectionAsync.bind(this);
     this.setNoNetworkMessage = this.setNoNetworkMessage.bind(this);
     this.useIsConnected = this.useIsConnected.bind(this);
 
@@ -56,7 +56,7 @@ export class NetworkManagerClass {
   }
 
   get isConnected() {
-    return Core.state.isConnected;
+    return huds0nState.state.isNetworkConnected;
   }
 
   setNoNetworkMessage(message: ToastTypes.Message) {
@@ -68,71 +68,50 @@ export class NetworkManagerClass {
   }
 
   private _handleConnection() {
-    function handleIsConnected(state: NetInfoState) {
-      Core.setState({ isConnected: state.isConnected });
-    }
+    const handleIsConnected = (state: NetInfoState) => {
+      if (state.isConnected) {
+        this._ToastComponent.hide(this._noNetworkId);
+      } else {
+        this._ToastComponent.display({
+          ...this._noNetworkMessage,
+          _id: this._noNetworkId,
+        });
+      }
+
+      huds0nState.setState({ isNetworkConnected: state.isConnected || false });
+    };
 
     NetInfo.fetch().then(handleIsConnected);
     NetInfo.addEventListener(handleIsConnected);
-
-    Core.addListener('isConnected', ({ isConnected }) => {
-      if (isConnected) {
-        this._ToastComponent.hide(this._noNetworkId);
-      } else {
-        this._noNetworkId = this._ToastComponent.display(
-          this._noNetworkMessage,
-        );
-      }
-    });
   }
 
-  onConnection(
-    callback?: () => any,
-    onError?: (e: Error) => any,
-  ): { complete: Promise<boolean>; cancel: () => boolean } {
-    let removeListener: () => boolean;
-
-    const promise = new Promise<boolean>(async (resolve) => {
+  onConnectionAsync(timeout?: number) {
+    return new Promise<boolean>(async (resolve) => {
       if (this.isConnected) {
-        if (callback) {
-          await Promise.resolve(callback());
-        }
-
         resolve(true);
       } else {
-        removeListener = Core.addListener(
-          'isConnected',
-          async ({ isConnected }) => {
-            if (isConnected) {
+        const removeListener = huds0nState.addListener(
+          'isNetworkConnected',
+          async ({ isNetworkConnected }) => {
+            if (isNetworkConnected) {
               removeListener();
-              if (callback) {
-                await Promise.resolve(callback());
-              }
               resolve(true);
             }
           },
         );
+
+        if (typeof timeout === 'number') {
+          setTimeout(() => {
+            removeListener();
+            resolve(false);
+          }, timeout);
+        }
       }
     });
-
-    const { cancel, cancellablePromise } = makePromiseCancellable(promise);
-
-    const complete = cancellablePromise.catch((error) => {
-      removeListener?.();
-      onError?.(error);
-      return false;
-    });
-
-    return {
-      cancel,
-      complete,
-    };
   }
 
   useIsConnected() {
-    const [isConnected] = Core.useProp('isConnected');
-
-    return isConnected;
+    return huds0nState.useProp('isNetworkConnected')[0];
   }
 
   useSubmit<A extends any[], T>(
@@ -140,19 +119,14 @@ export class NetworkManagerClass {
     dependencies: any[] = [],
     options: Types.SubmitOptions<T> = {},
   ): [((...args: A) => Promise<void>) | undefined, Types.SubmitStatus] {
-    const {
-      disabled,
-      getErrorMessage,
-      onError,
-      onSuccess,
-      submittingMessage,
-    } = options;
+    const { disabled, getErrorMessage, onError, onSuccess, submittingMessage } =
+      options;
 
     const isConnected = this.useIsConnected();
 
     const _runCallback = async (...args: A) => {
-      Core.dismissInput();
-      let submittingMessageId: string | symbol | undefined;
+      huds0nState.state.dismissInput();
+      let submittingMessageId: ToastTypes.MessageId | undefined;
 
       if (submittingMessage) {
         submittingMessageId = this._ToastComponent.display(
@@ -186,7 +160,7 @@ export class NetworkManagerClass {
           handled: true,
         });
 
-        let errorMessageId: string | symbol | undefined;
+        let errorMessageId: ToastTypes.MessageId | undefined;
 
         const cancel = () => {
           errorMessageId && this._ToastComponent.hide(errorMessageId);
@@ -199,7 +173,11 @@ export class NetworkManagerClass {
             _runCallback(...args);
           };
 
-          const errorMessage = getErrorMessage({ error, cancel, tryAgain });
+          const errorMessage = getErrorMessage({
+            error: formattedError,
+            cancel,
+            tryAgain,
+          });
 
           errorMessageId = this._ToastComponent.display(
             assignEnumerableGetters(
@@ -218,10 +196,10 @@ export class NetworkManagerClass {
 
     const available = isConnected && !running && !disabled;
 
-    const submit = useMemo(() => (available ? run : undefined), [
-      ...dependencies,
-      available,
-    ]);
+    const submit = useMemo(
+      () => (available ? run : undefined),
+      [...dependencies, available],
+    );
 
     let status: Types.SubmitStatus = running
       ? 'SUBMITTING'

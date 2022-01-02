@@ -1,11 +1,6 @@
 import Huds0nError from '@huds0n/error';
 import { ToastTypes } from '@huds0n/toast';
 
-export type Options = {
-  noNetworkMessage?: ToastTypes.Message;
-  ToastComponent?: any;
-};
-
 export type SubmitOptions<T> = {
   disabled?: boolean;
   getErrorMessage?: (options: SubmitErrorOptions) => ToastTypes.Message;

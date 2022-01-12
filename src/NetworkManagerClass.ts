@@ -1,16 +1,16 @@
-import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
+import NetInfo, { NetInfoState } from "@react-native-community/netinfo";
 
-import Huds0nError from '@huds0n/error';
-import { Toast, ToastTypes } from '@huds0n/toast';
-import { theme } from '@huds0n/theming/src/theme';
+import Huds0nError from "@huds0n/error";
+import { Toast, ToastTypes } from "@huds0n/toast";
+import { theme } from "@huds0n/theming/src/theme";
 import {
   assignEnumerableGetters,
   useAsyncCallback,
   useMemo,
-} from '@huds0n/utilities';
-import { huds0nState } from '@huds0n/utilities/src/_core';
+} from "@huds0n/utilities";
+import { huds0nState } from "@huds0n/utilities/src/_core";
 
-import * as Types from './types';
+import type { Types } from "./types";
 
 export class NetworkManagerClass {
   static DEFAULT_NO_NETWORK_MESSAGE: ToastTypes.Message<any> = {
@@ -19,9 +19,9 @@ export class NetworkManagerClass {
       return theme.colors.WARN;
     },
     zIndex: 1,
-    layout: 'relative',
-    message: 'No Network Connection',
-    messageStyle: { alignSelf: 'center' },
+    layout: "relative",
+    message: "No Network Connection",
+    messageStyle: { alignSelf: "center" },
   };
   static DEFAULT_SUBMITTING_MESSAGE: ToastTypes.Message<any> = {
     autoDismiss: false,
@@ -35,13 +35,13 @@ export class NetworkManagerClass {
     disableScreenTouch: true,
     zIndex: 3,
     icon: {
-      name: 'error-outline',
-      set: 'MaterialIcons',
+      name: "error-outline",
+      set: "MaterialIcons",
     },
   };
 
-  private _noNetworkId = Symbol('noNetworkMessageId');
-  private _noNetworkMessage: ToastTypes.MessageWithoutPreset =
+  private _noNetworkId = Symbol("noNetworkMessageId");
+  private _noNetworkMessage: ToastTypes.Message<any> =
     NetworkManagerClass.DEFAULT_NO_NETWORK_MESSAGE;
   private _ToastComponent = Toast;
 
@@ -63,7 +63,7 @@ export class NetworkManagerClass {
     this._noNetworkMessage = assignEnumerableGetters(
       {},
       NetworkManagerClass.DEFAULT_NO_NETWORK_MESSAGE,
-      message,
+      message
     );
   }
 
@@ -72,6 +72,7 @@ export class NetworkManagerClass {
       if (state.isConnected) {
         this._ToastComponent.hide(this._noNetworkId);
       } else {
+        // @ts-ignore
         this._ToastComponent.display({
           ...this._noNetworkMessage,
           _id: this._noNetworkId,
@@ -91,16 +92,16 @@ export class NetworkManagerClass {
         resolve(true);
       } else {
         const removeListener = huds0nState.addListener(
-          'isNetworkConnected',
           async ({ isNetworkConnected }) => {
             if (isNetworkConnected) {
               removeListener();
               resolve(true);
             }
           },
+          "isNetworkConnected"
         );
 
-        if (typeof timeout === 'number') {
+        if (typeof timeout === "number") {
           setTimeout(() => {
             removeListener();
             resolve(false);
@@ -111,13 +112,13 @@ export class NetworkManagerClass {
   }
 
   useIsConnected() {
-    return huds0nState.useProp('isNetworkConnected')[0];
+    return huds0nState.useProp("isNetworkConnected")[0];
   }
 
   useSubmit<A extends any[], T>(
     asyncCallback: (...args: A) => T | Promise<T>,
     dependencies: any[] = [],
-    options: Types.SubmitOptions<T> = {},
+    options: Types.SubmitOptions<T> = {}
   ): [((...args: A) => Promise<void>) | undefined, Types.SubmitStatus] {
     const { disabled, getErrorMessage, onError, onSuccess, submittingMessage } =
       options;
@@ -133,8 +134,8 @@ export class NetworkManagerClass {
           assignEnumerableGetters(
             {},
             NetworkManagerClass.DEFAULT_SUBMITTING_MESSAGE,
-            submittingMessage,
-          ),
+            submittingMessage
+          )
         );
       }
 
@@ -152,11 +153,11 @@ export class NetworkManagerClass {
         }
 
         const formattedError = Huds0nError.transform(error, {
-          name: 'NetworkManagerError',
-          code: 'SUBMIT_ERROR',
-          message: 'Unable to submit',
+          name: "NetworkManagerError",
+          code: "SUBMIT_ERROR",
+          message: "Unable to submit",
           info: { submitOptions: options },
-          severity: 'HIGH',
+          severity: "HIGH",
           handled: true,
         });
 
@@ -183,8 +184,8 @@ export class NetworkManagerClass {
             assignEnumerableGetters(
               {},
               NetworkManagerClass.DEFAULT_ERROR_MESSAGE,
-              errorMessage,
-            ),
+              errorMessage
+            )
           );
         } else {
           cancel();
@@ -198,16 +199,16 @@ export class NetworkManagerClass {
 
     const submit = useMemo(
       () => (available ? run : undefined),
-      [...dependencies, available],
+      [...dependencies, available]
     );
 
     let status: Types.SubmitStatus = running
-      ? 'SUBMITTING'
+      ? "SUBMITTING"
       : !isConnected
-      ? 'NO_CONNECTION'
+      ? "NO_CONNECTION"
       : options?.disabled
-      ? 'DISABLED'
-      : 'AVAILABLE';
+      ? "DISABLED"
+      : "AVAILABLE";
 
     return [submit, status];
   }

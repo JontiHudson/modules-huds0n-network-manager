@@ -1,6 +1,6 @@
 {
   "name": "@huds0n/network-manager",
-  "version": "1.6.0-beta61",
+  "version": "1.6.0-beta63",
   "description": "Applies message bar when no connection found and when data is no longer fresh. Exposed the hook: useIsConnected",
   "main": "./index.js",
   "types": "./index.d.ts",
@@ -21,10 +21,10 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@huds0n/error": "1.6.0-beta61",
-    "@huds0n/theming": "1.6.0-beta61",
-    "@huds0n/toast": "1.6.0-beta61",
-    "@huds0n/utilities": "1.6.0-beta61",
+    "@huds0n/error": "1.6.0-beta63",
+    "@huds0n/theming": "1.6.0-beta63",
+    "@huds0n/toast": "1.6.0-beta63",
+    "@huds0n/utilities": "1.6.0-beta63",
     "@react-native-community/netinfo": "7.1.3",
     "tslib": "^2.3.1"
   },
